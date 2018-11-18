@@ -33,7 +33,7 @@
 
 ;;; Code:
 
-(require 'ox-md)
+(require 'ox-gfm)
 (require 'json)
 (require 'request)
 
@@ -81,13 +81,15 @@ the authorization to the header."
 
 (defun write-as-org-to-md-string ()
   "Return the current Org buffer as a md string."
-  (let ((org-buffer (current-buffer))
-        (md-buffer (org-md-export-as-markdown)))
+  (let ((window-config (current-window-configuration))
+        (org-buffer (current-buffer))
+        (md-buffer (org-gfm-export-as-markdown)))
     (let ((md-string
            (with-current-buffer md-buffer
              (buffer-substring (point-min) (point-max)))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
+      (set-window-configuration window-config)
       md-string)))
 
 
@@ -158,7 +160,8 @@ the authorization to the header."
                                         write-as-post-token
                                         title
                                         body))
-      (write-as-publish-buffer))))
+      (save-window-excursion
+        (write-as-publish-buffer)))))
 
 
 ;;;###autoload
