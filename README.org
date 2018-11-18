@@ -13,6 +13,7 @@ This project is not on Melpa yet, so until then, download the file and put it so
   :config (load-library "write-as-auth-token.el.gpg"))
 #+END_SRC
 
+This package now depends on [[https://github.com/larstvei/ox-gfm][ox-gfm]] to get the code export done properly.
 * Usage
 
 1. Write an Org file.
