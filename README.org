@@ -1,0 +1,34 @@
+#+TITLE: Write-as.el
+
+This small library allows you to publish and update your Org-mode files as posts in the microblogging platform [[https://write.as][write.as]].
+
+* Installation
+
+This project is not on Melpa yet, so until then, download the file and put it somewhere your Emacs can find it. Then:
+
+#+BEGIN_SRC emacs-lisp
+(use-package write-as
+  ;; Authentification token
+  ;; Alternatively (setq write-as-auth-token "00000000-0000-0000-0000-000000000000")
+  :config (load-library "write-as-auth-token.el.gpg"))
+#+END_SRC
+
+* Usage
+
+1. Write an Org file.
+2. Call =write-as-publish-or-update= to push the post to write.as.
+Here write-as.el will store the post-id and post-access-token as local variables directly in your org document. This allows you to visit your post online, or update it later.
+3. Call =write-as-visit-post= to visit your post online.
+
+All posts will be created anonymously, unless you set the variable =write-as-auth-token= is set to a valid user access token. 
+For more information about generating access tokens visit https://developers.write.as/docs/api/#authentication.
+
+In short, copy and paste this into your shell, changing the username and password to those of your account:
+
+#+BEGIN_SRC sh
+curl "https://write.as/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{"alias": "user", "pass": "12345"}'
+#+END_SRC
+
