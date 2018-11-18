@@ -73,8 +73,8 @@
   "If a write-as-auth-token is available, then add
 the authorization to the header."
   (if write-as-auth-token
-      (cons '("Authorization" .
-              (concat "Token " write-as-auth-token))
+      (cons `("Authorization" .
+              ,(concat "Token " write-as-auth-token))
             write-as-request-default-header)
     write-as-request-default-header))
 
