@@ -39,8 +39,11 @@
 (require 'request)
 
 
-(defvar write-as-api-endpoint "https://write.as/api/posts"
-  "URL of the write.as API endpoint")
+(defvar write-as-api-posts-endpoint "https://write.as/api/posts"
+  "URL of the write.as API posts endpoint")
+
+(defvar write-as-api-collections-endpoint "https://write.as/api/me/collections"
+  "URL of the write.as API collections endpoint")
 
 (defvar write-as-request-default-header
   '(("Content-Type" . "application/json"))
@@ -68,7 +71,7 @@
 
 
 (defun write-as-get-post-url (post-id)
-  (concat write-as-api-endpoint "/" post-id))
+  (concat write-as-api-posts-endpoint "/" post-id))
 
 
 (defun write-as-post-link-for-visit (post-id)
@@ -98,12 +101,30 @@ the authorization to the header."
       md-string)))
 
 
+(defun write-as-get-user-collections ()
+  "Retrieve a user write-as collections"
+  (if write-as-auth-token
+      (let ((response (request-response-data
+                       (request
+                        write-as-api-collections-endpoint
+                        :type "GET"
+                        :parser #'json-read
+                        :headers (write-as-generate-request-header)
+                        :sync t
+                        :error (function*
+                                (lambda (&key error-thrown &allow-other-keys&rest _)
+                                  (message "Got error: %S" error-thrown)))))))
+        (mapcar #'(lambda (x) (assoc-default 'alias x))
+                (assoc-default 'data response)))
+    (message "Cannot get user collections if not authenticated.")))
+
+
 (defun write-as-post-publish-request (title body)
   "Send POST request to the write.as API endpoint with title and body as data.
    Return parsed JSON response"
   (request-response-data
    (request
-    write-as-api-endpoint
+    write-as-api-posts-endpoint
     :type "POST"
     :parser #'json-read
     :data (json-encode
