@@ -89,10 +89,10 @@ the authorization to the header."
   "Return the current Org buffer as a md string."
   (save-window-excursion
     (let* ((org-buffer (current-buffer))
-          (md-buffer (org-gfm-export-as-markdown))
-          ((md-string
-            (with-current-buffer md-buffer
-              (buffer-substring (point-min) (point-max))))))
+           (md-buffer (org-gfm-export-as-markdown))
+           ((md-string
+             (with-current-buffer md-buffer
+               (buffer-substring (point-min) (point-max))))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
       md-string)))
@@ -111,8 +111,9 @@ the authorization to the header."
              ("body" . ,body)))
     :headers (write-as-generate-request-header)
     :sync t
-    :error (function* (lambda (&key error-thrown &allow-other-keys&rest _)
-                        (message "Got error: %S" error-thrown))))))
+    :error (function*
+            (lambda (&key error-thrown &allow-other-keys&rest _)
+              (message "Got error: %S" error-thrown))))))
 
 
 ;; To update a post
