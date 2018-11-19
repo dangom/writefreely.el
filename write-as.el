@@ -116,12 +116,14 @@ the authorization to the header."
     (message "Cannot get user collections if not authenticated.")))
 
 
-(defun write-as-post-publish-request (title body)
+(defun write-as-post-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
    Return parsed JSON response"
   (request-response-data
    (request
-    (concat write-as-api-endpoint "/posts")
+    (if collection
+        (concat write-as-api-endpoint "/collections/" collection "/posts")
+      write-as-api-endpoint "/posts")
     :type "POST"
     :parser #'json-read
     :data (json-encode
@@ -155,12 +157,12 @@ the authorization to the header."
              (message "Got error: %S" error-thrown)))))
 
 
-(defun write-as-publish-buffer ()
+(defun write-as-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as."
   (let* ((title (write-as-get-orgmode-keyword "TITLE"))
          (body (write-as-org-to-md-string))
          ;; POST the blogpost with title and body
-         (response (write-as-post-publish-request title body))
+         (response (write-as-post-publish-request title body &optional collection))
          ;; Get the id and token from the response
          (post-id (assoc-default 'id (assoc 'data response)))
          (post-token (assoc-default 'token (assoc 'data response))))
@@ -184,7 +186,17 @@ the authorization to the header."
                                         write-as-post-token
                                         title
                                         body))
-      (write-as-publish-buffer))))
+      (if write-as-auth-token
+          (let* ((anonymous-collection "-- submit post anonymously --")
+                (collection
+                 (completing-read "Submit post to which collection:"
+                                  (cons
+                                   anonymous-collection
+                                   (write-as-get-user-collections)))))
+            (if (string-equal anonymous-collection collection)
+                (write-as-publish-buffer)
+              (write-as-publish-buffer collection)))
+        (write-as-publish-buffer)))))
 
 
 ;;;###autoload
