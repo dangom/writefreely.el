@@ -5,6 +5,7 @@
 ;; Author: Daniel Gomez <d.gomez at posteo dot org>
 ;; Created: 2018-16-11
 ;; URL: https://github.com/dangom/write-as.el
+;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0"))
 ;; Version: 0.01
 ;; Keywords: convenience
 
