@@ -39,11 +39,8 @@
 (require 'request)
 
 
-(defvar write-as-api-posts-endpoint "https://write.as/api/posts"
+(defvar write-as-api-endpoint "https://write.as/api"
   "URL of the write.as API posts endpoint")
-
-(defvar write-as-api-collections-endpoint "https://write.as/api/me/collections"
-  "URL of the write.as API collections endpoint")
 
 (defvar write-as-request-default-header
   '(("Content-Type" . "application/json"))
@@ -52,6 +49,14 @@
 (defvar write-as-auth-token nil
   "User authorization token.
   See https://developers.write.as/docs/api/ for instructions.")
+
+
+(defun write-as-api-get-post-url (post-id)
+  (concat write-as-api-endpoint "/posts/" post-id))
+
+
+(defun write-as-publication-link (post-id)
+  (concat "https://write.as/" post-id ".md"))
 
 
 ;; from http://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00134.html
@@ -68,14 +73,6 @@
           (when (eq 'keyword (org-element-type element))
             (push (org-element-property :value element) result))))
       result)))
-
-
-(defun write-as-get-post-url (post-id)
-  (concat write-as-api-posts-endpoint "/" post-id))
-
-
-(defun write-as-post-link-for-visit (post-id)
-  (concat "https://write.as/" post-id ".md"))
 
 
 (defun write-as-generate-request-header ()
@@ -106,7 +103,7 @@ the authorization to the header."
   (if write-as-auth-token
       (let ((response (request-response-data
                        (request
-                        write-as-api-collections-endpoint
+                        (concat write-as-api-endpoint "/me/collections")
                         :type "GET"
                         :parser #'json-read
                         :headers (write-as-generate-request-header)
@@ -124,7 +121,7 @@ the authorization to the header."
    Return parsed JSON response"
   (request-response-data
    (request
-    write-as-api-posts-endpoint
+    (concat write-as-api-endpoint "/posts")
     :type "POST"
     :parser #'json-read
     :data (json-encode
@@ -142,7 +139,7 @@ the authorization to the header."
   "Send POST request to the write.as API endpoint with title and body as data.
    Message post successfully updated."
   (request
-   (write-as-get-post-url post-id)
+   (write-as-api-get-post-url post-id)
    :type "POST"
    :parser #'json-read
    :data (json-encode
@@ -202,7 +199,7 @@ the authorization to the header."
         (shell-command
          (concat browse-program
                  " "
-                 (write-as-post-link-for-visit write-as-post-id))))))
+                 (write-as-publication-link write-as-post-id))))))
 
 
 (provide 'write-as)
