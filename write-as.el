@@ -86,15 +86,14 @@ the authorization to the header."
 
 (defun write-as-org-to-md-string ()
   "Return the current Org buffer as a md string."
-  (let ((window-config (current-window-configuration))
-        (org-buffer (current-buffer))
-        (md-buffer (org-gfm-export-as-markdown)))
-    (let ((md-string
-           (with-current-buffer md-buffer
-             (buffer-substring (point-min) (point-max)))))
+  (save-window-excursion
+    (let* ((org-buffer (current-buffer))
+          (md-buffer (org-gfm-export-as-markdown))
+          ((md-string
+            (with-current-buffer md-buffer
+              (buffer-substring (point-min) (point-max))))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
-      (set-window-configuration window-config)
       md-string)))
 
 
@@ -165,8 +164,7 @@ the authorization to the header."
                                         write-as-post-token
                                         title
                                         body))
-      (save-window-excursion
-        (write-as-publish-buffer)))))
+      (write-as-publish-buffer))))
 
 
 ;;;###autoload
