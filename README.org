@@ -1,6 +1,6 @@
 #+TITLE: Write-as.el
 
-This small library allows you to publish and update your Org-mode files as posts in the microblogging platform [[https://write.as][write.as]].
+This small library allows you to publish and update your Org-mode files as posts in the microblogging platform [[https://write.as][write.as]]. No account nor registration is required for anonymous posts in the platform.
 
 * Installation
 
@@ -8,7 +8,8 @@ This project is not on Melpa yet, so until then, download the file and put it so
 
 #+BEGIN_SRC emacs-lisp
 (use-package write-as
-  ;; Authentification token
+  :after org
+  ;; Authentification token, if wanted.
   ;; Alternatively (setq write-as-auth-token "00000000-0000-0000-0000-000000000000")
   :config (load-library "write-as-auth-token.el.gpg"))
 #+END_SRC
