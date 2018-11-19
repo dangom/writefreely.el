@@ -6,7 +6,7 @@
 ;; Created: 2018-16-11
 ;; URL: https://github.com/dangom/write-as.el
 ;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0") (request "0.3"))
-;; Version: 0.01
+;; Version: 0.0.2
 ;; Keywords: convenience
 
 ;; This file is not part of GNU Emacs.
@@ -90,9 +90,9 @@ the authorization to the header."
   (save-window-excursion
     (let* ((org-buffer (current-buffer))
            (md-buffer (org-gfm-export-as-markdown))
-           ((md-string
-             (with-current-buffer md-buffer
-               (buffer-substring (point-min) (point-max))))))
+           (md-string
+            (with-current-buffer md-buffer
+              (buffer-substring-no-properties (point-min) (point-max)))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
       md-string)))
@@ -116,24 +116,35 @@ the authorization to the header."
     (message "Cannot get user collections if not authenticated.")))
 
 
+
+(defun write-as-json-encode-data (title body &optional post-token)
+  "Encode data as json for request."
+  (let* ((alist `(("title" . ,title)
+                  ("body" . ,body)))
+         (token-alist (if post-token
+                          (cons `("token" . ,post-token) alist)
+                        alist)))
+    (json-encode token-alist)))
+
+
 (defun write-as-post-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
    Return parsed JSON response"
-  (request-response-data
-   (request
-    (if collection
-        (concat write-as-api-endpoint "/collections/" collection "/posts")
-      write-as-api-endpoint "/posts")
-    :type "POST"
-    :parser #'json-read
-    :data (json-encode
-           `(("title" . ,title)
-             ("body" . ,body)))
-    :headers (write-as-generate-request-header)
-    :sync t
-    :error (function*
-            (lambda (&key error-thrown &allow-other-keys&rest _)
-              (message "Got error: %S" error-thrown))))))
+  (let ((endpoint
+         (concat write-as-api-endpoint
+                 (when collection (concat "/collections/" collection))
+                 "/posts")))
+    (request-response-data
+     (request
+      endpoint
+      :type "POST"
+      :parser #'json-read
+      :data (write-as-json-encode-data title body)
+      :headers (write-as-generate-request-header)
+      :sync t
+      :error (function*
+              (lambda (&key error-thrown &allow-other-keys&rest _)
+                (message "Got error: %S" error-thrown)))))))
 
 
 ;; To update a post
@@ -144,17 +155,22 @@ the authorization to the header."
    (write-as-api-get-post-url post-id)
    :type "POST"
    :parser #'json-read
-   :data (json-encode
-          `(("title" . ,title)
-            ("token" . ,post-token)
-            ("body" . ,body)))
+   :data (write-as-json-encode-data title body post-token)
    :headers (write-as-generate-request-header)
    :success (function*
              (lambda (&key data &allow-other-keys)
                (message "Post successfully updated.")))
    :error (function*
            (lambda (&key error-thrown &allow-other-keys&rest _)
-             (message "Got error: %S" error-thrown)))))
+             (message "Got error: %S" (assoc-default 'code error-thrown))))))
+
+
+(defun write-as-update-org-buffer-locals (post-id post-token)
+  "Setq-local and add-file-local variables for write-as post"
+  (setq-local write-as-post-id post-id)
+  (add-file-local-variable 'write-as-post-id post-id)
+  (setq-local write-as-post-token post-token)
+  (add-file-local-variable 'write-as-post-token post-token))
 
 
 (defun write-as-publish-buffer (&optional collection)
@@ -162,16 +178,15 @@ the authorization to the header."
   (let* ((title (write-as-get-orgmode-keyword "TITLE"))
          (body (write-as-org-to-md-string))
          ;; POST the blogpost with title and body
-         (response (write-as-post-publish-request title body &optional collection))
+         (response (write-as-post-publish-request title body collection))
          ;; Get the id and token from the response
          (post-id (assoc-default 'id (assoc 'data response)))
          (post-token (assoc-default 'token (assoc 'data response))))
     ;; Use setq-local as well because otherwise the local variables won't be
     ;; evaluated.
-    (setq-local write-as-post-id post-id)
-    (add-file-local-variable 'write-as-post-id post-id)
-    (setq-local write-as-post-token post-token)
-    (add-file-local-variable 'write-as-post-token post-token)))
+    (if post-id
+        (write-as-update-org-buffer-locals post-id post-token)
+      (error "Post ID missing. Request probably went wrong."))))
 
 
 ;;;###autoload
@@ -188,11 +203,11 @@ the authorization to the header."
                                         body))
       (if write-as-auth-token
           (let* ((anonymous-collection "-- submit post anonymously --")
-                (collection
-                 (completing-read "Submit post to which collection:"
-                                  (cons
-                                   anonymous-collection
-                                   (write-as-get-user-collections)))))
+                 (collection
+                  (completing-read "Submit post to which collection:"
+                                   (cons
+                                    anonymous-collection
+                                    (write-as-get-user-collections)))))
             (if (string-equal anonymous-collection collection)
                 (write-as-publish-buffer)
               (write-as-publish-buffer collection)))
