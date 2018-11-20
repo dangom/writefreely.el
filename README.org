@@ -27,6 +27,8 @@ Here write-as.el will store the post-id and post-access-token as local variables
 All posts will be created anonymously, unless you set the variable =write-as-auth-token= is set to a valid user access token. 
 For more information about generating access tokens visit https://developers.write.as/docs/api/#authentication.
 
+When authenticated, you may choose to submit posts anonymously or to one of your collections.
+
 In short, copy and paste this into your shell, changing the username and password to those of your account:
 
 #+BEGIN_SRC sh
