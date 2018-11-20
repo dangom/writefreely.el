@@ -124,6 +124,11 @@ the authorization to the header."
                         alist)))
     (json-encode token-alist)))
 
+(defun* write-as-publish-success-fn (&key data &allow-other-keys)
+  (message "Post successfully published."))
+
+(defun* write-as-error-fn (&key error-thrown &allow-other-keys&rest _)
+  (message "Got error: %S" error-thrown))
 
 (defun write-as-post-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
@@ -131,36 +136,39 @@ the authorization to the header."
   (let ((endpoint
          (concat write-as-api-endpoint
                  (when collection (concat "/collections/" collection))
-                 "/posts")))
+                 "/posts"))
+        (data (write-as-json-encode-data title body))
+        (headers (write-as-generate-request-header)))
     (request-response-data
      (request
       endpoint
       :type "POST"
       :parser #'json-read
-      :data (write-as-json-encode-data title body)
-      :headers (write-as-generate-request-header)
+      :data data
+      :headers headers
       :sync t
-      :error (function*
-              (lambda (&key error-thrown &allow-other-keys&rest _)
-                (message "Got error: %S" error-thrown)))))))
+      :success #'write-as-publish-success-fn
+      :error #'write-as-error-fn))))
 
+
+(defun* write-as-update-success-fn (&key data &allow-other-keys)
+  (message "Post successfully updated."))
 
 ;; To update a post
 (defun write-as-post-update-request (post-id post-token title body)
   "Send POST request to the write.as API endpoint with title and body as data.
    Message post successfully updated."
-  (request
-   (write-as-api-get-post-url post-id)
-   :type "POST"
-   :parser #'json-read
-   :data (write-as-json-encode-data title body post-token)
-   :headers (write-as-generate-request-header)
-   :success (function*
-             (lambda (&key data &allow-other-keys)
-               (message "Post successfully updated.")))
-   :error (function*
-           (lambda (&key error-thrown &allow-other-keys&rest _)
-             (message "Got error: %S" (assoc-default 'code error-thrown))))))
+  (let ((endpoint (write-as-api-get-post-url post-id))
+        (data (write-as-json-encode-data title body post-token))
+        (headers (write-as-generate-request-header)))
+    (request
+     endpoint
+     :type "POST"
+     :parser #'json-read
+     :data data
+     :headers headers
+     :success #'write-as-update-success-fn
+     :error #'write-as-error-fn)))
 
 
 (defun write-as-update-org-buffer-locals (post-id post-token)
