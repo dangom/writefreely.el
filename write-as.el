@@ -62,18 +62,12 @@
 ;; from http://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00134.html
 (defun write-as-get-orgmode-keyword (key)
   "To get the #+TITLE of an org file, do
-   (write-as-get-orgmode-keyword \"#+TITLE\")
-  "
-  (org-with-point-at 1
-    (let ((case-fold-search t)
-          (regexp (format "^[ \t]*#\\+%s:" key))
-          (result nil))
-      (while (re-search-forward regexp nil t)
-        (let ((element (org-element-at-point)))
-          (when (eq 'keyword (org-element-type element))
-            (push (org-element-property :value element) result))))
-      result)))
-
+   (write-as-get-orgmode-keyword \"#+TITLE\")"
+  (org-element-map (org-element-parse-buffer) 'keyword
+    (lambda (k)
+      (when (string= key (org-element-property :key k))
+	      (org-element-property :value k)))
+    nil t))
 
 (defun write-as-generate-request-header ()
   "If a write-as-auth-token is available, then add
