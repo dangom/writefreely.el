@@ -7,7 +7,7 @@
 ;; Created: 2018-16-11
 ;; URL: https://github.com/dangom/write-as.el
 ;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0") (request "0.3"))
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Keywords: convenience
 
 ;; This file is not part of GNU Emacs.
