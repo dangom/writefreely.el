@@ -51,6 +51,9 @@
   "User authorization token.
   See https://developers.write.as/docs/api/ for instructions.")
 
+(defvar write-as-always-confirm-submit t
+  "When nil, ask for confirmation before submission.")
+
 
 (defun write-as-api-get-post-url (post-id)
   (concat write-as-api-endpoint "/posts/" post-id))
@@ -187,7 +190,8 @@ the authorization to the header."
 ;;;###autoload
 (defun write-as-publish-or-update ()
   (interactive)
-  (when (y-or-n-p "Do you really want to publish this file to write-as? ")
+  (when (or  write-as-always-confirm-submit
+             (y-or-n-p "Do you really want to publish this file to write-as? "))
     (if (and (boundp 'write-as-post-id)
              (boundp 'write-as-post-token))
         (let ((title (write-as-get-orgmode-keyword "TITLE"))
