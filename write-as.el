@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t -*-
 ;;; write-as.el --- Push your Org files as markdown to write.as
 
 ;; Copyright (C) 2018 Daniel Gomez
