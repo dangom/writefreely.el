@@ -39,32 +39,44 @@
 (require 'json)
 (require 'request)
 
+
+;;; User-Configurable Variables
 
-(defvar write-as-api-endpoint "https://write.as/api"
+(defgroup write-as nil
+  "Publish org-mode files to write.as"
+  :tag "Write.as"
+  :group 'convenience
+  :version "24.3")
+
+(defcustom write-as-auth-token nil
+  "User authorization token.
+  See https://developers.write.as/docs/api/ for instructions."
+  :type 'string)
+
+(defcustom write-as-always-confirm-submit t
+  "When nil, ask for confirmation before submission."
+  :type 'bool)
+
+
+;;; Constants
+
+
+(defconst write-as-api-endpoint "https://write.as/api"
   "URL of the write.as API posts endpoint")
 
-(defvar write-as-request-default-header
+(defconst write-as-request-default-header
   '(("Content-Type" . "application/json"))
   "Default request header")
 
-(defvar write-as-auth-token nil
-  "User authorization token.
-  See https://developers.write.as/docs/api/ for instructions.")
+
+;;; Support Functions
 
-(defvar write-as-always-confirm-submit t
-  "When nil, ask for confirmation before submission.")
-
-
-(defun write-as-api-get-post-url (post-id)
+(defun write-as--api-get-post-url (post-id)
   (concat write-as-api-endpoint "/posts/" post-id))
 
 
-(defun write-as-publication-link (post-id)
-  (concat "https://write.as/" post-id ".md"))
-
-
 ;; from http://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00134.html
-(defun write-as-get-orgmode-keyword (key)
+(defun write-as--get-orgmode-keyword (key)
   "To get the #+TITLE of an org file, do
    (write-as-get-orgmode-keyword \"#+TITLE\")"
   (org-element-map (org-element-parse-buffer) 'keyword
@@ -73,7 +85,8 @@
 	      (org-element-property :value k)))
     nil t))
 
-(defun write-as-generate-request-header ()
+
+(defun write-as--generate-request-header ()
   "If a write-as-auth-token is available, then add
 the authorization to the header."
   (if write-as-auth-token
@@ -83,7 +96,7 @@ the authorization to the header."
     write-as-request-default-header))
 
 
-(defun write-as-org-to-md-string ()
+(defun write-as--org-as-md-string ()
   "Return the current Org buffer as a md string."
   (save-window-excursion
     (let* ((org-buffer (current-buffer))
@@ -96,7 +109,7 @@ the authorization to the header."
       md-string)))
 
 
-(defun write-as-get-user-collections ()
+(defun write-as--get-user-collections ()
   "Retrieve a user write-as collections"
   (if write-as-auth-token
       (let ((response (request-response-data
@@ -104,7 +117,7 @@ the authorization to the header."
                         (concat write-as-api-endpoint "/me/collections")
                         :type "GET"
                         :parser #'json-read
-                        :headers (write-as-generate-request-header)
+                        :headers (write-as--generate-request-header)
                         :sync t
                         :error (function*
                                 (lambda (&key error-thrown &allow-other-keys&rest _)
@@ -114,8 +127,7 @@ the authorization to the header."
     (message "Cannot get user collections if not authenticated.")))
 
 
-
-(defun write-as-json-encode-data (title body &optional post-token)
+(defun write-as--json-encode-data (title body &optional post-token)
   "Encode data as json for request."
   (let* ((alist `(("title" . ,title)
                   ("body" . ,body)))
@@ -124,11 +136,33 @@ the authorization to the header."
                         alist)))
     (json-encode token-alist)))
 
-(defun* write-as-publish-success-fn (&key data &allow-other-keys)
+
+(defun write-as--update-org-buffer-locals (post-id post-token)
+  "Setq-local and add-file-local variables for write-as post"
+  (setq-local write-as-post-id post-id)
+  (add-file-local-variable 'write-as-post-id post-id)
+  (setq-local write-as-post-token post-token)
+  (add-file-local-variable 'write-as-post-token post-token))
+
+
+(defun* write-as--publish-success-fn (&key data &allow-other-keys)
   (message "Post successfully published."))
 
-(defun* write-as-error-fn (&key error-thrown &allow-other-keys&rest _)
+
+(defun* write-as--update-success-fn (&key data &allow-other-keys)
+  (message "Post successfully updated."))
+
+
+(defun* write-as--error-fn (&key error-thrown &allow-other-keys&rest _)
   (message "Got error: %S" error-thrown))
+
+
+;;; Non-interactive functions
+
+(defun write-as-publication-link (post-id)
+  "Return the non-api write.as link from a given post-id."
+  (concat "https://write.as/" post-id ".md"))
+
 
 (defun write-as-post-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
@@ -137,8 +171,8 @@ the authorization to the header."
          (concat write-as-api-endpoint
                  (when collection (concat "/collections/" collection))
                  "/posts"))
-        (data (write-as-json-encode-data title body))
-        (headers (write-as-generate-request-header)))
+        (data (write-as--json-encode-data title body))
+        (headers (write-as--generate-request-header)))
     (request-response-data
      (request
       endpoint
@@ -147,42 +181,34 @@ the authorization to the header."
       :data data
       :headers headers
       :sync t
-      :success #'write-as-publish-success-fn
-      :error #'write-as-error-fn))))
+      :success #'write-as--publish-success-fn
+      :error #'write-as--error-fn))))
 
-
-(defun* write-as-update-success-fn (&key data &allow-other-keys)
-  (message "Post successfully updated."))
 
 ;; To update a post
 (defun write-as-post-update-request (post-id post-token title body)
   "Send POST request to the write.as API endpoint with title and body as data.
-   Message post successfully updated."
-  (let ((endpoint (write-as-api-get-post-url post-id))
-        (data (write-as-json-encode-data title body post-token))
-        (headers (write-as-generate-request-header)))
+   Message post successfully updated.
+   Note that this function does not return the response data, as in the
+   case of write-as-post-publish-request, as we already have the information
+   we need, i.e., post-id and post-token."
+  (let ((endpoint (write-as--api-get-post-url post-id))
+        (data (write-as--json-encode-data title body post-token))
+        (headers (write-as--generate-request-header)))
     (request
      endpoint
      :type "POST"
      :parser #'json-read
      :data data
      :headers headers
-     :success #'write-as-update-success-fn
-     :error #'write-as-error-fn)))
-
-
-(defun write-as-update-org-buffer-locals (post-id post-token)
-  "Setq-local and add-file-local variables for write-as post"
-  (setq-local write-as-post-id post-id)
-  (add-file-local-variable 'write-as-post-id post-id)
-  (setq-local write-as-post-token post-token)
-  (add-file-local-variable 'write-as-post-token post-token))
+     :success #'write-as--update-success-fn
+     :error #'write-as--error-fn)))
 
 
 (defun write-as-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as."
-  (let* ((title (write-as-get-orgmode-keyword "TITLE"))
-         (body (write-as-org-to-md-string))
+  (let* ((title (write-as--get-orgmode-keyword "TITLE"))
+         (body (write-as--org-as-md-string))
          ;; POST the blogpost with title and body
          (response (write-as-post-publish-request title body collection))
          ;; Get the id and token from the response
@@ -191,19 +217,26 @@ the authorization to the header."
     ;; Use setq-local as well because otherwise the local variables won't be
     ;; evaluated.
     (if post-id
-        (write-as-update-org-buffer-locals post-id post-token)
+        (write-as--update-org-buffer-locals post-id post-token)
       (error "Post ID missing. Request probably went wrong."))))
+
+
+;;; Interactive functions
 
 
 ;;;###autoload
 (defun write-as-publish-or-update ()
+  "Publish or update Org file to write.as. This function
+   will attempt to update the contents of a blog post if it finds
+   a post-id and post-token local variables, otherwise it'll publish
+   the file as a new post."
   (interactive)
   (when (or  write-as-always-confirm-submit
              (y-or-n-p "Do you really want to publish this file to write-as? "))
     (if (and (boundp 'write-as-post-id)
              (boundp 'write-as-post-token))
-        (let ((title (write-as-get-orgmode-keyword "TITLE"))
-              (body (write-as-org-to-md-string)))
+        (let ((title (write-as--get-orgmode-keyword "TITLE"))
+              (body (write-as--org-as-md-string)))
           (write-as-post-update-request write-as-post-id
                                         write-as-post-token
                                         title
@@ -214,7 +247,7 @@ the authorization to the header."
                   (completing-read "Submit post to which collection:"
                                    (cons
                                     anonymous-collection
-                                    (write-as-get-user-collections)))))
+                                    (write-as--get-user-collections)))))
             (if (string-equal anonymous-collection collection)
                 (write-as-publish-buffer)
               (write-as-publish-buffer collection)))
@@ -223,6 +256,7 @@ the authorization to the header."
 
 ;;;###autoload
 (defun write-as-visit-post ()
+  "Open the current post on a webbrowser for viewing."
   (interactive)
   (if (and (boundp 'write-as-post-id)
            (boundp 'write-as-post-token))
@@ -237,4 +271,5 @@ the authorization to the header."
 
 
 (provide 'write-as)
+
 ;;; write-as.el ends here
