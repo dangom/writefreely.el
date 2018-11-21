@@ -2,6 +2,11 @@
 
 This small library allows you to publish and update your Org-mode files as posts to any instance of the federated blogging platform [[https://writefreely.org][write freely]]. No account nor registration is required for anonymous posts in the platform.
 
+View it in action:
+
+#+ATTR_HTML: :style margin-left: auto; margin-right: auto;
+[[writefreely-el-demo.gif]]
+
 An example post generated with this library can be found [[https://write.as/dani/an-emacs-library-for-frictionless-blogging][here]].
 
 * Installation
