@@ -1,11 +1,11 @@
 ;; -*- lexical-binding: t -*-
-;;; write-as.el --- Push your Org files as markdown to write.as
+;;; writefreely.el --- Push your Org files as markdown to a writefreely instance
 
 ;; Copyright (C) 2018 Daniel Gomez
 
 ;; Author: Daniel Gomez <d.gomez at posteo dot org>
 ;; Created: 2018-16-11
-;; URL: https://github.com/dangom/write-as.el
+;; URL: https://github.com/dangom/writefreely.el
 ;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0") (request "0.3"))
 ;; Version: 0.0.3
 ;; Keywords: convenience
@@ -42,22 +42,27 @@
 
 ;;; User-Configurable Variables
 
-(defgroup write-as nil
+(defgroup writefreely nil
   "Publish org-mode files to write.as"
-  :tag "Write.as"
+  :tag "WriteFreely"
   :group 'convenience
   :version "24.3")
 
-(defcustom write-as-auth-token nil
+(defcustom writefreely-auth-token nil
   "User authorization token.
   See https://developers.write.as/docs/api/ for instructions."
   :type 'string)
 
-(defcustom write-as-always-confirm-submit t
+(defcustom writefreely-always-confirm-submit t
   "When nil, ask for confirmation before submission."
   :type 'bool)
 
-(defcustom write-as-api-endpoint "https://write.as/api"
+(defcustom writefreely-instance-url "https://write.as"
+  "URL of the write.as API posts endpoint. You may
+   change the endpoint in case your blog runs in a different
+   writefreely endpoint.")
+
+(defcustom writefreely-instance-api-endpoint "https://write.as/api"
   "URL of the write.as API posts endpoint. You may
    change the endpoint in case your blog runs in a different
    writefreely endpoint.")
@@ -66,21 +71,21 @@
 ;;; Constants
 
 
-(defconst write-as-request-default-header
+(defconst writefreely-request-default-header
   '(("Content-Type" . "application/json"))
   "Default request header")
 
 
 ;;; Support Functions
 
-(defun write-as--api-get-post-url (post-id)
-  (concat write-as-api-endpoint "/posts/" post-id))
+(defun writefreely--api-get-post-url (post-id)
+  (concat writefreely-instance-api-endpoint "/posts/" post-id))
 
 
 ;; from http://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00134.html
-(defun write-as--get-orgmode-keyword (key)
+(defun writefreely--get-orgmode-keyword (key)
   "To get the #+TITLE of an org file, do
-   (write-as-get-orgmode-keyword \"#+TITLE\")"
+   (writefreely-get-orgmode-keyword \"#+TITLE\")"
   (org-element-map (org-element-parse-buffer) 'keyword
     (lambda (k)
       (when (string= key (org-element-property :key k))
@@ -88,17 +93,17 @@
     nil t))
 
 
-(defun write-as--generate-request-header ()
-  "If a write-as-auth-token is available, then add
+(defun writefreely--generate-request-header ()
+  "If a writefreely-auth-token is available, then add
 the authorization to the header."
-  (if write-as-auth-token
+  (if writefreely-auth-token
       (cons `("Authorization" .
-              ,(concat "Token " write-as-auth-token))
-            write-as-request-default-header)
-    write-as-request-default-header))
+              ,(concat "Token " writefreely-auth-token))
+            writefreely-request-default-header)
+    writefreely-request-default-header))
 
 
-(defun write-as--org-as-md-string ()
+(defun writefreely--org-as-md-string ()
   "Return the current Org buffer as a md string."
   (save-window-excursion
     (let* ((org-buffer (current-buffer))
@@ -111,15 +116,15 @@ the authorization to the header."
       md-string)))
 
 
-(defun write-as--get-user-collections ()
-  "Retrieve a user write-as collections"
-  (if write-as-auth-token
+(defun writefreely--get-user-collections ()
+  "Retrieve a user writefreely collections"
+  (if writefreely-auth-token
       (let ((response (request-response-data
                        (request
-                        (concat write-as-api-endpoint "/me/collections")
+                        (concat writefreely-instance-api-endpoint "/me/collections")
                         :type "GET"
                         :parser #'json-read
-                        :headers (write-as--generate-request-header)
+                        :headers (writefreely--generate-request-header)
                         :sync t
                         :error (function*
                                 (lambda (&key error-thrown &allow-other-keys&rest _)
@@ -129,7 +134,7 @@ the authorization to the header."
     (message "Cannot get user collections if not authenticated.")))
 
 
-(defun write-as--json-encode-data (title body &optional post-token)
+(defun writefreely--json-encode-data (title body &optional post-token)
   "Encode data as json for request."
   (let* ((alist `(("title" . ,title)
                   ("body" . ,body)))
@@ -139,42 +144,42 @@ the authorization to the header."
     (json-encode token-alist)))
 
 
-(defun write-as--update-org-buffer-locals (post-id post-token)
-  "Setq-local and add-file-local variables for write-as post"
-  (setq-local write-as-post-id post-id)
-  (add-file-local-variable 'write-as-post-id post-id)
-  (setq-local write-as-post-token post-token)
-  (add-file-local-variable 'write-as-post-token post-token))
+(defun writefreely--update-org-buffer-locals (post-id post-token)
+  "Setq-local and add-file-local variables for writefreely post"
+  (setq-local writefreely-post-id post-id)
+  (add-file-local-variable 'writefreely-post-id post-id)
+  (setq-local writefreely-post-token post-token)
+  (add-file-local-variable 'writefreely-post-token post-token))
 
 
-(defun* write-as--publish-success-fn (&key data &allow-other-keys)
+(defun* writefreely--publish-success-fn (&key data &allow-other-keys)
   (message "Post successfully published."))
 
 
-(defun* write-as--update-success-fn (&key data &allow-other-keys)
+(defun* writefreely--update-success-fn (&key data &allow-other-keys)
   (message "Post successfully updated."))
 
 
-(defun* write-as--error-fn (&key error-thrown &allow-other-keys&rest _)
+(defun* writefreely--error-fn (&key error-thrown &allow-other-keys&rest _)
   (message "Got error: %S" error-thrown))
 
 
 ;;; Non-interactive functions
 
-(defun write-as-publication-link (post-id)
+(defun writefreely-publication-link (post-id)
   "Return the non-api write.as link from a given post-id."
-  (concat "https://write.as/" post-id ".md"))
+  (concat writefreely-instance-url "/" post-id ".md"))
 
 
-(defun write-as-post-publish-request (title body &optional collection)
+(defun writefreely-post-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
    Return parsed JSON response"
   (let ((endpoint
-         (concat write-as-api-endpoint
+         (concat writefreely-instance-api-endpoint
                  (when collection (concat "/collections/" collection))
                  "/posts"))
-        (data (write-as--json-encode-data title body))
-        (headers (write-as--generate-request-header)))
+        (data (writefreely--json-encode-data title body))
+        (headers (writefreely--generate-request-header)))
     (request-response-data
      (request
       endpoint
@@ -183,43 +188,43 @@ the authorization to the header."
       :data data
       :headers headers
       :sync t
-      :success #'write-as--publish-success-fn
-      :error #'write-as--error-fn))))
+      :success #'writefreely--publish-success-fn
+      :error #'writefreely--error-fn))))
 
 
 ;; To update a post
-(defun write-as-post-update-request (post-id post-token title body)
+(defun writefreely-post-update-request (post-id post-token title body)
   "Send POST request to the write.as API endpoint with title and body as data.
    Message post successfully updated.
    Note that this function does not return the response data, as in the
-   case of write-as-post-publish-request, as we already have the information
+   case of writefreely-post-publish-request, as we already have the information
    we need, i.e., post-id and post-token."
-  (let ((endpoint (write-as--api-get-post-url post-id))
-        (data (write-as--json-encode-data title body post-token))
-        (headers (write-as--generate-request-header)))
+  (let ((endpoint (writefreely--api-get-post-url post-id))
+        (data (writefreely--json-encode-data title body post-token))
+        (headers (writefreely--generate-request-header)))
     (request
      endpoint
      :type "POST"
      :parser #'json-read
      :data data
      :headers headers
-     :success #'write-as--update-success-fn
-     :error #'write-as--error-fn)))
+     :success #'writefreely--update-success-fn
+     :error #'writefreely--error-fn)))
 
 
-(defun write-as-publish-buffer (&optional collection)
+(defun writefreely-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as."
-  (let* ((title (write-as--get-orgmode-keyword "TITLE"))
-         (body (write-as--org-as-md-string))
+  (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
+         (body (writefreely--org-as-md-string))
          ;; POST the blogpost with title and body
-         (response (write-as-post-publish-request title body collection))
+         (response (writefreely-post-publish-request title body collection))
          ;; Get the id and token from the response
          (post-id (assoc-default 'id (assoc 'data response)))
          (post-token (assoc-default 'token (assoc 'data response))))
     ;; Use setq-local as well because otherwise the local variables won't be
     ;; evaluated.
     (if post-id
-        (write-as--update-org-buffer-locals post-id post-token)
+        (writefreely--update-org-buffer-locals post-id post-token)
       (error "Post ID missing. Request probably went wrong."))))
 
 
@@ -227,41 +232,41 @@ the authorization to the header."
 
 
 ;;;###autoload
-(defun write-as-publish-or-update ()
+(defun writefreely-publish-or-update ()
   "Publish or update Org file to write.as. This function
    will attempt to update the contents of a blog post if it finds
    a post-id and post-token local variables, otherwise it'll publish
    the file as a new post."
   (interactive)
-  (when (or  write-as-always-confirm-submit
-             (y-or-n-p "Do you really want to publish this file to write-as? "))
-    (if (and (boundp 'write-as-post-id)
-             (boundp 'write-as-post-token))
-        (let ((title (write-as--get-orgmode-keyword "TITLE"))
-              (body (write-as--org-as-md-string)))
-          (write-as-post-update-request write-as-post-id
-                                        write-as-post-token
+  (when (or  writefreely-always-confirm-submit
+             (y-or-n-p "Do you really want to publish this file to writefreely? "))
+    (if (and (boundp 'writefreely-post-id)
+             (boundp 'writefreely-post-token))
+        (let ((title (writefreely--get-orgmode-keyword "TITLE"))
+              (body (writefreely--org-as-md-string)))
+          (writefreely-post-update-request writefreely-post-id
+                                        writefreely-post-token
                                         title
                                         body))
-      (if write-as-auth-token
+      (if writefreely-auth-token
           (let* ((anonymous-collection "-- submit post anonymously --")
                  (collection
                   (completing-read "Submit post to which collection:"
                                    (cons
                                     anonymous-collection
-                                    (write-as--get-user-collections)))))
+                                    (writefreely--get-user-collections)))))
             (if (string-equal anonymous-collection collection)
-                (write-as-publish-buffer)
-              (write-as-publish-buffer collection)))
-        (write-as-publish-buffer)))))
+                (writefreely-publish-buffer)
+              (writefreely-publish-buffer collection)))
+        (writefreely-publish-buffer)))))
 
 
 ;;;###autoload
-(defun write-as-visit-post ()
+(defun writefreely-visit-post ()
   "Open the current post on a webbrowser for viewing."
   (interactive)
-  (if (and (boundp 'write-as-post-id)
-           (boundp 'write-as-post-token))
+  (if (and (boundp 'writefreely-post-id)
+           (boundp 'writefreely-post-token))
       (let ((browse-program
              (cond
               ((eq system-type 'darwin) "open")
@@ -269,9 +274,9 @@ the authorization to the header."
         (shell-command
          (concat browse-program
                  " "
-                 (write-as-publication-link write-as-post-id))))))
+                 (writefreely-publication-link writefreely-post-id))))))
 
 
-(provide 'write-as)
+(provide 'writefreely)
 
-;;; write-as.el ends here
+;;; writefreely.el ends here

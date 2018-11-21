@@ -1,6 +1,6 @@
-#+TITLE: Write-as.el
+#+TITLE: WriteFreely.el
 
-This small library allows you to publish and update your Org-mode files as posts in the microblogging platform [[https://write.as][write.as]]. No account nor registration is required for anonymous posts in the platform.
+This small library allows you to publish and update your Org-mode files as posts to any instance of the federated blogging platform [[https://writefreely.org][write freely]]. No account nor registration is required for anonymous posts in the platform.
 
 An example post generated with this library can be found [[https://write.as/dani/an-emacs-library-for-frictionless-blogging][here]].
 
@@ -9,27 +9,28 @@ An example post generated with this library can be found [[https://write.as/dani
 This project is not on Melpa yet, so until then, download the file and put it somewhere your Emacs can find it. Then:
 
 #+BEGIN_SRC emacs-lisp
-(use-package write-as
+(use-package writefreely
   :after org
   ;; Authentification token, if wanted.
-  ;; Alternatively (setq write-as-auth-token "00000000-0000-0000-0000-000000000000")
-  :config (load-library "write-as-auth-token.el.gpg"))
+  ;; Alternatively (setq writefreely-auth-token "00000000-0000-0000-0000-000000000000")
+  :config (load-library "writefreely-auth-token.el.gpg"))
 #+END_SRC
 
 This package now depends on [[https://github.com/larstvei/ox-gfm][ox-gfm]] to get the code export done properly.
 * Usage
 
 1. Write an Org file. You may want to set the following options, to tweak ox-gfm's export: =toc:nil -:nil \n:t=.
-2. Call =write-as-publish-or-update= to push the post to write.as.
-Here write-as.el will store the post-id and post-access-token as local variables directly in your org document. This allows you to visit your post online, or update it later.
-3. Call =write-as-visit-post= to visit your post online.
+2. Call =writefreely-publish-or-update= to push the post to write.as.  Here writefreely.el will store the post-id and post-access-token as local variables directly in your org document. This allows you to visit your post online, or update it later.
+3. Call =writefreely-visit-post= to visit your post online.
 
-All posts will be created anonymously, unless you set the variable =write-as-auth-token= is set to a valid user access token. 
+To configure your writefreely instance, simply customise the variables =writefreely-instance-url= and, most importanly, =writefreely-instance-api-endpoint=. Per default they point to [[https://write.as][write.as]].
+
+All posts will be created anonymously, unless you set the variable =writefreely-auth-token= is set to a valid user access token. 
 For more information about generating access tokens visit https://developers.write.as/docs/api/#authentication.
 
 When authenticated, you may choose to submit posts anonymously or to one of your collections.
 
-In short, copy and paste this into your shell, changing the username and password to those of your account:
+If using the write.as, instance, for example, copy and paste the following into your shell, changing the username and password to those of your account:
 
 #+BEGIN_SRC sh
 curl "https://write.as/api/auth/login" \
