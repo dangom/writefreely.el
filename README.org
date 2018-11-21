@@ -19,7 +19,7 @@ This project is not on Melpa yet, so until then, download the file and put it so
 This package now depends on [[https://github.com/larstvei/ox-gfm][ox-gfm]] to get the code export done properly.
 * Usage
 
-1. Write an Org file.
+1. Write an Org file. You may want to set the following options, to tweak ox-gfm's export: =toc:nil -:nil \n:t=.
 2. Call =write-as-publish-or-update= to push the post to write.as.
 Here write-as.el will store the post-id and post-access-token as local variables directly in your org document. This allows you to visit your post online, or update it later.
 3. Call =write-as-visit-post= to visit your post online.
