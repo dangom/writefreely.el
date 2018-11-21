@@ -58,14 +58,14 @@
   :type 'bool)
 
 (defcustom writefreely-instance-url "https://write.as"
-  "URL of the write.as API posts endpoint. You may
+  "URL of the writefreely instance. You may
    change the endpoint in case your blog runs in a different
-   writefreely endpoint.")
+   writefreely instance.")
 
 (defcustom writefreely-instance-api-endpoint "https://write.as/api"
-  "URL of the write.as API posts endpoint. You may
+  "URL of the writefreely API endpoint. You may
    change the endpoint in case your blog runs in a different
-   writefreely endpoint.")
+   writefreely instance.")
 
 
 ;;; Constants
@@ -167,7 +167,7 @@ the authorization to the header."
 ;;; Non-interactive functions
 
 (defun writefreely-publication-link (post-id)
-  "Return the non-api write.as link from a given post-id."
+  "Return the publication link from a given post-id."
   (concat writefreely-instance-url "/" post-id ".md"))
 
 
