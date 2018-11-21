@@ -60,12 +60,14 @@
 (defcustom writefreely-instance-url "https://write.as"
   "URL of the writefreely instance. You may
    change the endpoint in case your blog runs in a different
-   writefreely instance.")
+   writefreely instance."
+  :type 'string)
 
 (defcustom writefreely-instance-api-endpoint "https://write.as/api"
   "URL of the writefreely API endpoint. You may
    change the endpoint in case your blog runs in a different
-   writefreely instance.")
+   writefreely instance."
+  :type 'string)
 
 
 ;;; Constants
