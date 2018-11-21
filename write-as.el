@@ -57,12 +57,14 @@
   "When nil, ask for confirmation before submission."
   :type 'bool)
 
+(defcustom write-as-api-endpoint "https://write.as/api"
+  "URL of the write.as API posts endpoint. You may
+   change the endpoint in case your blog runs in a different
+   writefreely endpoint.")
+
 
 ;;; Constants
 
-
-(defconst write-as-api-endpoint "https://write.as/api"
-  "URL of the write.as API posts endpoint")
 
 (defconst write-as-request-default-header
   '(("Content-Type" . "application/json"))
