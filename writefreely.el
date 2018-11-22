@@ -182,7 +182,7 @@ the authorization to the header."
   (concat writefreely-instance-url "/" post-id ".md"))
 
 
-(defun writefreely-post-publish-request (title body &optional collection)
+(defun writefreely-publish-request (title body &optional collection)
   "Send POST request to the write.as API endpoint with title and body as data.
    Return parsed JSON response"
   (let ((endpoint
@@ -204,11 +204,11 @@ the authorization to the header."
 
 
 ;; To update a post
-(defun writefreely-post-update-request (post-id post-token title body)
+(defun writefreely-update-request (post-id post-token title body)
   "Send POST request to the write.as API endpoint with title and body as data.
    Message post successfully updated.
    Note that this function does not return the response data, as in the
-   case of writefreely-post-publish-request, as we already have the information
+   case of writefreely-publish-request, as we already have the information
    we need, i.e., post-id and post-token."
   (let ((endpoint (writefreely--api-get-post-url post-id))
         (data (writefreely--json-encode-data title body post-token))
@@ -272,7 +272,7 @@ the authorization to the header."
     (if (writefreely--post-exists)
         (let ((title (writefreely--get-orgmode-keyword "TITLE"))
               (body (writefreely--org-as-md-string)))
-          (writefreely-post-update-request writefreely-post-id
+          (writefreely-update-request writefreely-post-id
                                         writefreely-post-token
                                         title
                                         body))
