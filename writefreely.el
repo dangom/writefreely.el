@@ -173,7 +173,10 @@ the authorization to the header."
 
 
 (defun* writefreely--update-success-fn (&key data &allow-other-keys)
-  (message "Post successfully updated."))
+  (let ((id (assoc-default 'id (assoc-default 'data data))))
+    (if (string-equal id "spamspamspamspam")
+        (message "Post rejected for being considered spam. Contact write.as")
+      (message "Post successfully updated."))))
 
 
 (defun* writefreely--delete-success-fn (&key data &allow-other-keys)
