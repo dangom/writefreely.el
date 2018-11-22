@@ -146,12 +146,21 @@ the authorization to the header."
     (json-encode token-alist)))
 
 
+(defun writefreely--remove-org-buffer-locals ()
+  "Setq-local and add-file-local variables for writefreely post"
+  (makunbound 'writefreely-post-id)
+  (makunbound 'writefreely-post-token)
+  (delete-file-local-variable 'writefreely-post-id)
+  (delete-file-local-variable 'writefreely-post-token))
+
+
 (defun writefreely--update-org-buffer-locals (post-id post-token)
   "Setq-local and add-file-local variables for writefreely post"
   (setq-local writefreely-post-id post-id)
   (add-file-local-variable 'writefreely-post-id post-id)
   (setq-local writefreely-post-token post-token)
   (add-file-local-variable 'writefreely-post-token post-token))
+
 
 (defun writefreely--post-exists ()
   "Check whether a buffer is a post, i.e., contains both
@@ -168,6 +177,7 @@ the authorization to the header."
 
 
 (defun* writefreely--delete-success-fn (&key data &allow-other-keys)
+  (writefreely--remove-org-buffer-locals)
   (message "Post successfully deleted."))
 
 
@@ -232,12 +242,14 @@ the authorization to the header."
   (let ((endpoint (concat
                    (writefreely--api-get-post-url post-id)
                    "?token="
-                   post-token)))
+                   post-token))
+        (headers (writefreely--generate-request-header)))
     (request
      endpoint
      :type "DELETE"
+     :headers headers
      :parser #'json-read
-     :success #'writefreely--delete-success-fn
+     :status-code '((204 . writefreely--delete-success-fn))
      :error #'writefreely--error-fn)))
 
 
