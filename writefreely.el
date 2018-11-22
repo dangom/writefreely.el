@@ -153,6 +153,11 @@ the authorization to the header."
   (setq-local writefreely-post-token post-token)
   (add-file-local-variable 'writefreely-post-token post-token))
 
+(defun writefreely--post-exists ()
+  "Check whether a buffer is a post, i.e., contains both
+   a post-id and a post-token."
+  (and (boundp 'writefreely-post-id)
+       (boundp 'writefreely-post-token)))
 
 (defun* writefreely--publish-success-fn (&key data &allow-other-keys)
   (message "Post successfully published."))
@@ -242,8 +247,7 @@ the authorization to the header."
   (interactive)
   (when (or  writefreely-always-confirm-submit
              (y-or-n-p "Do you really want to publish this file to writefreely? "))
-    (if (and (boundp 'writefreely-post-id)
-             (boundp 'writefreely-post-token))
+    (if (writefreely--post-exists)
         (let ((title (writefreely--get-orgmode-keyword "TITLE"))
               (body (writefreely--org-as-md-string)))
           (writefreely-post-update-request writefreely-post-id
@@ -267,8 +271,7 @@ the authorization to the header."
 (defun writefreely-visit-post ()
   "Open the current post on a webbrowser for viewing."
   (interactive)
-  (if (and (boundp 'writefreely-post-id)
-           (boundp 'writefreely-post-token))
+  (if (writefreely--post-exists)
       (let ((browse-program
              (cond
               ((eq system-type 'darwin) "open")
