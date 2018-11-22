@@ -167,6 +167,10 @@ the authorization to the header."
   (message "Post successfully updated."))
 
 
+(defun* writefreely--delete-success-fn (&key data &allow-other-keys)
+  (message "Post successfully deleted."))
+
+
 (defun* writefreely--error-fn (&key error-thrown &allow-other-keys&rest _)
   (message "Got error: %S" error-thrown))
 
@@ -219,12 +223,30 @@ the authorization to the header."
      :error #'writefreely--error-fn)))
 
 
+(defun writefreely-delete-request (post-id post-token)
+  "Send POST request to the write.as API endpoint with title and body as data.
+   Message post successfully updated.
+   Note that this function does not return the response data, as in the
+   case of writefreely-publish-request, as we already have the information
+   we need, i.e., post-id and post-token."
+  (let ((endpoint (concat
+                   (writefreely--api-get-post-url post-id)
+                   "?token="
+                   post-token)))
+    (request
+     endpoint
+     :type "DELETE"
+     :parser #'json-read
+     :success #'writefreely--delete-success-fn
+     :error #'writefreely--error-fn)))
+
+
 (defun writefreely-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as."
   (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
          (body (writefreely--org-as-md-string))
          ;; POST the blogpost with title and body
-         (response (writefreely-post-publish-request title body collection))
+         (response (writefreely-publish-request title body collection))
          ;; Get the id and token from the response
          (post-id (assoc-default 'id (assoc 'data response)))
          (post-token (assoc-default 'token (assoc 'data response))))
@@ -265,6 +287,16 @@ the authorization to the header."
                 (writefreely-publish-buffer)
               (writefreely-publish-buffer collection)))
         (writefreely-publish-buffer)))))
+
+
+;;;###autoload
+(defun writefreely-delete-post ()
+  "Delete current post and clear local variables."
+  (interactive)
+  (if (writefreely--post-exists)
+      (writefreely-delete-request
+       writefreely-post-id writefreely-post-token)
+    (message "Cannot delete non-existing post.")))
 
 
 ;;;###autoload
