@@ -143,7 +143,7 @@ the authorization to the header."
          (token-alist (if post-token
                           (cons `("token" . ,post-token) alist)
                         alist)))
-    (json-encode token-alist)))
+    (encode-coding-string (json-encode token-alist) 'utf-8)))
 
 
 (defun writefreely--remove-org-buffer-locals ()
