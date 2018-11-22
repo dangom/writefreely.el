@@ -315,6 +315,13 @@ the authorization to the header."
 
 
 ;;;###autoload
+(defun writefreely-clear-file-info ()
+  "Dissociate current file from a writefreely post."
+  (interactive)
+  (writefreely--remove-org-buffer-locals))
+
+
+;;;###autoload
 (defun writefreely-visit-post ()
   "Open the current post on a webbrowser for viewing."
   (interactive)
