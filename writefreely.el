@@ -326,14 +326,8 @@ the authorization to the header."
   "Open the current post on a webbrowser for viewing."
   (interactive)
   (if (writefreely--post-exists)
-      (let ((browse-program
-             (cond
-              ((eq system-type 'darwin) "open")
-              ((eq system-type 'linux) (executable-find "firefox")))))
-        (shell-command
-         (concat browse-program
-                 " "
-                 (writefreely-publication-link writefreely-post-id))))))
+      (browse-url
+       (writefreely-publication-link writefreely-post-id))))
 
 
 (provide 'writefreely)
