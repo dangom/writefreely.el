@@ -77,6 +77,14 @@
   '(("Content-Type" . "application/json"))
   "Default request header")
 
+(defconst writefreely-org-ref-bibliography-entry-format
+  '(("article" . "%a, %t, <i>%j</i>, <b>%v(%n)</b>, %p (%y). [doi](http://dx.doi.org/%D)")
+    ("book" . "%a, %t, %u (%y).")
+    ("techreport" . "%a, %t, %i, %u (%y).")
+    ("proceedings" . "%e, %t in %S, %u (%y).")
+    ("inproceedings" . "%a, %t, %p, in %b, edited by %e, %u (%y)"))
+  "Have ox-gfm output reference links compatible with writefreely's Markdown.")
+
 
 ;;; Support Functions
 
@@ -109,7 +117,11 @@ the authorization to the header."
   "Return the current Org buffer as a md string."
   (save-window-excursion
     (let* ((org-buffer (current-buffer))
-           (md-buffer (org-gfm-export-as-markdown))
+           (md-buffer
+            ;; Do not let bibliography links be converted to HTML.
+            (let ((org-ref-bibliography-entry-format
+                   writefreely-org-ref-bibliography-entry-format))
+              (org-gfm-export-as-markdown)))
            (md-string
             (with-current-buffer md-buffer
               (buffer-substring-no-properties (point-min) (point-max)))))
