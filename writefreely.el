@@ -56,6 +56,10 @@ See https://developers.write.as/docs/api/ for instructions."
   "When nil, ask for confirmation before submission."
   :type 'bool)
 
+(defcustom writefreely-maybe-publish-created-date nil
+  "When t, if #+DATE is found then use it as post creation date."
+  :type 'bool)
+
 (defcustom writefreely-instance-url "https://write.as"
   "URL of the writefreely instance.
 You may change the endpoint in case your blog runs in a different
@@ -129,6 +133,16 @@ Otherwise default header."
       md-string)))
 
 
+(defun writefreely--formatted-date-from-keyword ()
+  "Return an ISO8601 canonical date from an Org #+DATE keyword."
+  (let ((post-creation-date (writefreely--get-orgmode-keyword "DATE")))
+    (when post-creation-date
+      (format-time-string
+      "%Y-%m-%dT%T"
+      (apply #'encode-time
+             (org-parse-time-string post-creation-date))))))
+
+
 (defun writefreely--get-user-collections ()
   "Retrieve a user writefreely collections."
   (if writefreely-auth-token
@@ -152,10 +166,16 @@ Otherwise default header."
 If POST-TOKEN, encode it as well."
   (let* ((alist `(("title" . ,title)
                   ("body" . ,body)))
-         (token-alist (if post-token
-                          (cons `("token" . ,post-token) alist)
-                        alist)))
-    (encode-coding-string (json-encode token-alist) 'utf-8)))
+         (language (writefreely--get-orgmode-keyword "LANGUAGE"))
+         (created-date (writefreely--formatted-date-from-keyword)))
+    (when post-token
+      (add-to-list 'alist `("token" . ,post-token)))
+    (when language
+      (add-to-list 'alist `("lang" . ,language)))
+    (when (and writefreely-maybe-publish-created-date
+               created-date)
+      (add-to-list 'alist `("created" . ,created-date)))
+    (encode-coding-string (json-encode alist) 'utf-8)))
 
 
 (defun writefreely--remove-org-buffer-locals ()
@@ -243,7 +263,9 @@ Message post successfully updated.
    case of ‘writefreely-publish-request’, as we already have the information
    we need, i.e., POST-ID and POST-TOKEN."
   (let ((endpoint (writefreely--api-get-post-url post-id))
-        (data (writefreely--json-encode-data title body post-token))
+        (data
+         (let ((writefreely-maybe-publish-created-date nil))
+           (writefreely--json-encode-data title body post-token)))
         (headers (writefreely--generate-request-header)))
     (request
      endpoint
