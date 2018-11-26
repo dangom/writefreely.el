@@ -138,9 +138,10 @@ Otherwise default header."
   (let ((post-creation-date (writefreely--get-orgmode-keyword "DATE")))
     (when post-creation-date
       (format-time-string
-      "%Y-%m-%dT%T"
+       "%FT%TZ"
       (apply #'encode-time
-             (org-parse-time-string post-creation-date))))))
+             (org-parse-time-string post-creation-date))
+      t))))
 
 
 (defun writefreely--get-user-collections ()
