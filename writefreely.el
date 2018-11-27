@@ -37,6 +37,7 @@
 (require 'ox-gfm)
 (require 'json)
 (require 'request)
+(require 'cl)
 
 
 ;;; User-Configurable Variables
