@@ -372,6 +372,20 @@ This function will attempt to update the contents of a blog post if it finds
       (browse-url
        (writefreely-publication-link writefreely-post-id))))
 
+(defvar writefreely-mode-map (make-sparse-keymap)
+  "Keymap for writefreely mode")
+
+;;;###autoload
+(define-minor-mode writefreely-mode
+  "Minor mode to support published orgmode documents on a writefreely instance"
+  :lighter " WriteFreely"
+  :keymap writefreely-mode-map
+  (define-key writefreely-mode-map (kbd "C-c C-w s") 'writefreely-publish-or-update)
+  (define-key writefreely-mode-map (kbd "C-c C-w d") 'writefreely-delete-post)
+  (define-key writefreely-mode-map (kbd "C-c C-w v") 'writefreely-visit-post)
+  (define-key writefreely-mode-map (kbd "C-c C-w c") 'writefreely-clear-file-info)
+  )
+
 
 (provide 'writefreely)
 
