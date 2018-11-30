@@ -1,4 +1,6 @@
 #+TITLE: WriteFreely.el
+[[https://melpa.org/#/writefreely][file:https://melpa.org/packages/writefreely-badge.svg]]
+[[https://spacemacs.org][file:https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg]]
 
 This small library allows you to publish and update your Org-mode files as posts to any instance of the federated blogging platform [[https://writefreely.org][write freely]]. No account nor registration is required for anonymous posts in the platform.
 
@@ -11,11 +13,12 @@ An example post generated with this library can be found [[https://write.as/dani
 
 * Installation
 
-This project is not on Melpa yet, so until then, download the file and put it somewhere your Emacs can find it. Then:
+This project is available on Melpa. To use it:
 
 #+BEGIN_SRC emacs-lisp
 (use-package writefreely
   :after org
+  :ensure t
   ;; Authentification token, if wanted.
   ;; Alternatively (setq writefreely-auth-token "00000000-0000-0000-0000-000000000000")
   :config (load-library "writefreely-auth-token.el.gpg"))
