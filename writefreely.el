@@ -223,7 +223,7 @@ DATA is the request response data."
   (message "Post successfully deleted."))
 
 
-(defun* writefreely--error-fn (&key error-thrown &allow-other-keys&rest _)
+(defun* writefreely--error-fn (&key error-thrown &allow-other-keys)
   "Callback to run in case of error request response.
 ERROR-THROWN is the request response data."
   (message "Got error: %S" error-thrown))
