@@ -73,6 +73,10 @@ You may change the endpoint in case your blog runs in a different
 writefreely instance."
   :type 'string)
 
+(defcustom writefreely-multiple-mode nil
+  "When t, enable multiple-posts-per-file support."
+  :type 'bool)
+
 
 ;;; Constants
 
@@ -117,6 +121,17 @@ Otherwise default header."
     writefreely-request-default-header))
 
 
+(defun writefreely--find-enclosing-l1-headline ()
+  "Return the l1 headline element containing point."
+  (save-excursion
+    (org-up-heading-safe)
+    (when (not (eq (org-element-type (org-element-at-point)) 'headline))
+      (user-error "Point must be within a headline tree"))
+    (while (> (org-element-property :level (org-element-at-point)) 1)
+      (org-up-heading-safe))
+    (org-element-at-point)))
+
+
 (defun writefreely--org-as-md-string ()
   "Return the current Org buffer as a md string."
   (save-window-excursion
@@ -125,12 +140,23 @@ Otherwise default header."
             ;; Do not let bibliography links be converted to HTML.
             (let ((org-ref-bibliography-entry-format
                    writefreely-org-ref-bibliography-entry-format))
+	      (when writefreely-multiple-mode
+		(let ((headline (writefreely--find-enclosing-l1-headline)))
+		    (goto-char (org-element-property :begin headline))
+		    (org-narrow-to-subtree)))
               (org-gfm-export-as-markdown)))
            (md-string
             (with-current-buffer md-buffer
-              (buffer-substring-no-properties (point-min) (point-max)))))
+	      (if writefreely-multiple-mode
+		  ;; First line is also the heading, which is included
+		  ;; as the post title, so skip over it.
+		  (forward-line 1)
+		(goto-char (point-min)))
+              (buffer-substring-no-properties (point) (point-max)))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
+      (when writefreely-multiple-mode
+	(widen))
       md-string)))
 
 
@@ -182,24 +208,39 @@ If POST-TOKEN, encode it as well."
 
 (defun writefreely--remove-org-buffer-locals ()
   "Setq-local and add-file-local variables for writefreely post."
-  (makunbound 'writefreely-post-id)
-  (makunbound 'writefreely-post-token)
-  (delete-file-local-variable 'writefreely-post-id)
-  (delete-file-local-variable 'writefreely-post-token))
+  (if writefreely-multiple-mode
+      (progn
+	(let* ((headline (writefreely--find-enclosing-l1-headline))
+	       (pom (org-element-property :begin headline)))
+	  (org-entry-delete pom "POST-ID")
+	  (org-entry-delete pom "POST-TOKEN")))
+    (makunbound 'writefreely-post-id)
+    (makunbound 'writefreely-post-token)
+    (delete-file-local-variable 'writefreely-post-id)
+    (delete-file-local-variable 'writefreely-post-token)))
 
 
 (defun writefreely--update-org-buffer-locals (post-id post-token)
   "Setq-local and add-file-local variables POST-ID and POST-TOKEN for writefreely post."
-  (setq-local writefreely-post-id post-id)
-  (add-file-local-variable 'writefreely-post-id post-id)
-  (setq-local writefreely-post-token post-token)
-  (add-file-local-variable 'writefreely-post-token post-token))
+  (if writefreely-multiple-mode
+      (progn
+	(let* ((headline (writefreely--find-enclosing-l1-headline))
+	       (pom (org-element-property :begin headline)))
+	  (org-entry-put pom "POST-ID" post-id)
+	  (org-entry-put pom "POST-TOKEN" post-token)))
+    (setq-local writefreely-post-id post-id)
+    (add-file-local-variable 'writefreely-post-id post-id)
+    (setq-local writefreely-post-token post-token)
+    (add-file-local-variable 'writefreely-post-token post-token)))
 
 
 (defun writefreely--post-exists ()
   "Check whether a buffer is a post, i.e., has both a post-id and a post-token."
-  (and (boundp 'writefreely-post-id)
-       (boundp 'writefreely-post-token)))
+  (if writefreely-multiple-mode
+      (and (org-entry-get (point) "POST-ID" t)
+	   (org-entry-get (point) "POST-TOKEN" t))
+    (and (boundp 'writefreely-post-id)
+	 (boundp 'writefreely-post-token))))
 
 (defun* writefreely--publish-success-fn (&key data &allow-other-keys)
   "Callback to run upon successful request to publish post.
@@ -227,6 +268,27 @@ DATA is the request response data."
   "Callback to run in case of error request response.
 ERROR-THROWN is the request response data."
   (message "Got error: %S" error-thrown))
+
+
+(defun writefreely--get-post-id ()
+  "Return the post-id for the current file or headline."
+  (if writefreely-multiple-mode
+      (org-entry-get (point) "POST-ID" t)
+    writefreely-post-id))
+
+
+(defun writefreely--get-post-token ()
+  "Return the post-token for the current file or headline."
+  (if writefreely-multiple-mode
+      (org-entry-get (point) "POST-TOKEN" t)
+    writefreely-post-token))
+
+
+(defun writefreely--get-post-title ()
+  "Return the title for the current file or headline."
+  (if writefreely-multiple-mode
+      (org-element-property :title (writefreely--find-enclosing-l1-headline))
+    (writefreely--get-orgmode-keyword "TITLE")))
 
 
 ;;; Non-interactive functions
@@ -301,7 +363,7 @@ Message post successfully updated.
 
 (defun writefreely-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as anonymously, or to COLLECTION, if given."
-  (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
+  (let* ((title (writefreely--get-post-title))
          (body (writefreely--org-as-md-string))
          ;; POST the blogpost with title and body
          (response (writefreely-publish-request title body collection))
@@ -325,15 +387,20 @@ This function will attempt to update the contents of a blog post if it finds
    a post-id and post-token local variables, otherwise it'll publish
    the file as a new post."
   (interactive)
+  ;; TODO: When writefreely-multiple-mode, this should ask if you want
+  ;; to publish the heading (and display the name of the heading)
   (when (or  writefreely-always-confirm-submit
              (y-or-n-p "Do you really want to publish this file to writefreely? "))
     (if (writefreely--post-exists)
-        (let ((title (writefreely--get-orgmode-keyword "TITLE"))
+	;; TODO: When writefreely-multiple-mode, this should get the text
+	;; of the enclosing heading.
+        (let ((title (writefreely--get-post-title))
               (body (writefreely--org-as-md-string)))
-          (writefreely-update-request writefreely-post-id
-                                        writefreely-post-token
-                                        title
-                                        body))
+	  (message "Post title is [%s]" title)
+          (writefreely-update-request (writefreely--get-post-id)
+                                      (writefreely--get-post-token)
+                                      title
+                                      body))
       (if writefreely-auth-token
           (let* ((anonymous-collection "-- submit post anonymously --")
                  (collection
@@ -353,7 +420,7 @@ This function will attempt to update the contents of a blog post if it finds
   (interactive)
   (if (writefreely--post-exists)
       (writefreely-delete-request
-       writefreely-post-id writefreely-post-token)
+       (writefreely--get-post-id) (writefreely--get-post-token))
     (message "Cannot delete non-existing post.")))
 
 
@@ -370,7 +437,7 @@ This function will attempt to update the contents of a blog post if it finds
   (interactive)
   (if (writefreely--post-exists)
       (browse-url
-       (writefreely-publication-link writefreely-post-id))))
+       (writefreely-publication-link (writefreely--get-post-id)))))
 
 (defvar writefreely-mode-map (make-sparse-keymap)
   "Keymap for writefreely mode.")
