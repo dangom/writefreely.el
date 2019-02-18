@@ -206,32 +206,50 @@ If POST-TOKEN, encode it as well."
     (encode-coding-string (json-encode alist) 'utf-8)))
 
 
+(defun writefreely--remove-post-metdata ()
+  "Remove metadata associated with this post."
+  (if writefreely-multiple-mode
+      (writefreely--remove-post-properties)
+    (writefreely--remove-org-buffer-locals)))
+
+
+(defun writefreely--remove-post-properties ()
+  "Remove properites for the post associated with the current l1 headline."
+  (let* ((headline (writefreely--find-enclosing-l1-headline))
+	 (pom (org-element-property :begin headline)))
+    (org-entry-delete pom "POST-ID")
+    (org-entry-delete pom "POST-TOKEN")))
+
+
 (defun writefreely--remove-org-buffer-locals ()
   "Setq-local and add-file-local variables for writefreely post."
-  (if writefreely-multiple-mode
-      (progn
-	(let* ((headline (writefreely--find-enclosing-l1-headline))
-	       (pom (org-element-property :begin headline)))
-	  (org-entry-delete pom "POST-ID")
-	  (org-entry-delete pom "POST-TOKEN")))
-    (makunbound 'writefreely-post-id)
-    (makunbound 'writefreely-post-token)
-    (delete-file-local-variable 'writefreely-post-id)
-    (delete-file-local-variable 'writefreely-post-token)))
+  (makunbound 'writefreely-post-id)
+  (makunbound 'writefreely-post-token)
+  (delete-file-local-variable 'writefreely-post-id)
+  (delete-file-local-variable 'writefreely-post-token))
 
+
+(defun writefreely--update-post-metadata (post-id post-token)
+  "Update POST-ID and POST-TOKEN metadata for this post."
+  (if writefreely-multiple-mode
+      (writefreely--update-post-properties post-id post-token)
+    (writefreely--update-org-buffer-locals post-id post-token)))
+
+
+(defun writefreely--update-post-properties (post-id post-token)
+  "Update POST-ID and POST-TOKEN properties for the post associated with
+the current L1 headline."
+  (let* ((headline (writefreely--find-enclosing-l1-headline))
+	 (pom (org-element-property :begin headline)))
+    (org-entry-put pom "POST-ID" post-id)
+    (org-entry-put pom "POST-TOKEN" post-token)))
 
 (defun writefreely--update-org-buffer-locals (post-id post-token)
   "Setq-local and add-file-local variables POST-ID and POST-TOKEN for writefreely post."
-  (if writefreely-multiple-mode
-      (progn
-	(let* ((headline (writefreely--find-enclosing-l1-headline))
-	       (pom (org-element-property :begin headline)))
-	  (org-entry-put pom "POST-ID" post-id)
-	  (org-entry-put pom "POST-TOKEN" post-token)))
-    (setq-local writefreely-post-id post-id)
-    (add-file-local-variable 'writefreely-post-id post-id)
-    (setq-local writefreely-post-token post-token)
-    (add-file-local-variable 'writefreely-post-token post-token)))
+  (setq-local writefreely-post-id post-id)
+  (add-file-local-variable 'writefreely-post-id post-id)
+  (setq-local writefreely-post-token post-token)
+  (add-file-local-variable 'writefreely-post-token post-token))
 
 
 (defun writefreely--post-exists ()
@@ -260,7 +278,7 @@ DATA is the request response data."
 (defun* writefreely--delete-success-fn (&key data &allow-other-keys)
   "Callback to run upon successful deletion of post.
 DATA is the request response data."
-  (writefreely--remove-org-buffer-locals)
+  (writefreely--remove-post-metadata)
   (message "Post successfully deleted."))
 
 
@@ -373,7 +391,7 @@ Message post successfully updated.
     ;; Use setq-local as well because otherwise the local variables won't be
     ;; evaluated.
     (if post-id
-        (writefreely--update-org-buffer-locals post-id post-token)
+        (writefreely--update-post-metadata post-id post-token)
       (error "Post ID missing. Request probably went wrong"))))
 
 
@@ -426,9 +444,9 @@ This function will attempt to update the contents of a blog post if it finds
 
 ;;;###autoload
 (defun writefreely-clear-file-info ()
-  "Dissociate current file from a writefreely post."
+  "Dissociate current file or L1 heading from a writefreely post."
   (interactive)
-  (writefreely--remove-org-buffer-locals))
+  (writefreely--remove-post-metdata))
 
 
 ;;;###autoload
