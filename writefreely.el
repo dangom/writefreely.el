@@ -77,6 +77,15 @@ writefreely instance."
   "When t, enable multiple-posts-per-file support."
   :type 'bool)
 
+(defcustom writefreely-property-post-id "WRITEFREELY-POST-ID"
+  "Property name to record the post ID."
+  :type 'string)
+
+(defcustom writefreely-property-post-token "WRITEFREELY-POST-TOKEN"
+  "Property name to record the post token."
+  :type 'string)
+
+
 
 ;;; Constants
 
@@ -217,8 +226,8 @@ If POST-TOKEN, encode it as well."
   "Remove properites for the post associated with the current l1 headline."
   (let* ((headline (writefreely--find-enclosing-l1-headline))
 	 (pom (org-element-property :begin headline)))
-    (org-entry-delete pom "POST-ID")
-    (org-entry-delete pom "POST-TOKEN")))
+    (org-entry-delete pom writefreely-property-post-id)
+    (org-entry-delete pom writefreely-property-post-token)))
 
 
 (defun writefreely--remove-org-buffer-locals ()
@@ -241,8 +250,9 @@ If POST-TOKEN, encode it as well."
 the current L1 headline."
   (let* ((headline (writefreely--find-enclosing-l1-headline))
 	 (pom (org-element-property :begin headline)))
-    (org-entry-put pom "POST-ID" post-id)
-    (org-entry-put pom "POST-TOKEN" post-token)))
+    (org-entry-put pom writefreely-property-post-id post-id)
+    (org-entry-put pom writefreely-property-post-token post-token)))
+
 
 (defun writefreely--update-org-buffer-locals (post-id post-token)
   "Setq-local and add-file-local variables POST-ID and POST-TOKEN for writefreely post."
@@ -255,8 +265,8 @@ the current L1 headline."
 (defun writefreely--post-exists ()
   "Check whether a buffer is a post, i.e., has both a post-id and a post-token."
   (if writefreely-multiple-mode
-      (and (org-entry-get (point) "POST-ID" t)
-	   (org-entry-get (point) "POST-TOKEN" t))
+      (and (org-entry-get (point) writefreely-property-post-id t)
+	   (org-entry-get (point) writefreely-property-post-token t))
     (and (boundp 'writefreely-post-id)
 	 (boundp 'writefreely-post-token))))
 
@@ -291,14 +301,14 @@ ERROR-THROWN is the request response data."
 (defun writefreely--get-post-id ()
   "Return the post-id for the current file or headline."
   (if writefreely-multiple-mode
-      (org-entry-get (point) "POST-ID" t)
+      (org-entry-get (point) writefreely-property-post-id t)
     writefreely-post-id))
 
 
 (defun writefreely--get-post-token ()
   "Return the post-token for the current file or headline."
   (if writefreely-multiple-mode
-      (org-entry-get (point) "POST-TOKEN" t)
+      (org-entry-get (point) writefreely-property-post-token t)
     writefreely-post-token))
 
 
