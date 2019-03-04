@@ -302,7 +302,8 @@ Message post successfully updated.
 (defun writefreely-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as anonymously, or to COLLECTION, if given."
   (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
-         (body (writefreely--org-as-md-string))
+	 (tbody (writefreely--org-as-md-string))
+         (body (if (string-empty-p tbody) "-" tbody))
          ;; POST the blogpost with title and body
          (response (writefreely-publish-request title body collection))
          ;; Get the id and token from the response
