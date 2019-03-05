@@ -181,7 +181,7 @@ Otherwise default header."
 
 
 (defun writefreely--get-user-collections ()
-  "Retrieve a user writefreely collections."
+  "Retrieve a user's writefreely collections."
   (if writefreely-auth-token
       (let ((response (request-response-data
                        (request
