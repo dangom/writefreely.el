@@ -456,7 +456,7 @@ This function will attempt to update the contents of a blog post if it finds
 (defun writefreely-clear-file-info ()
   "Dissociate current file or L1 heading from a writefreely post."
   (interactive)
-  (writefreely--remove-post-metdata))
+  (writefreely--remove-post-metadata))
 
 
 ;;;###autoload
