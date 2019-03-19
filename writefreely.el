@@ -285,7 +285,8 @@ DATA is the request response data."
   "Callback to run upon successful request to update post.
 DATA is the request response data."
   (let ((id (assoc-default 'id (assoc-default 'data data))))
-    (if (string-equal id "spamspamspamspam")
+    (if (or (string-equal id "spamspamspamspam")
+	    (string-equal id "contentisblocked"))
         (message "Post rejected for being considered spam. Contact write.as")
       (message "Post successfully updated."))))
 
