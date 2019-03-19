@@ -238,7 +238,7 @@ ERROR-THROWN is the request response data."
 
 (defun writefreely-publish-request (title body &optional collection)
   "Send post request to the write.as API endpoint with TITLE and BODY as data.
-Optionally, if COLLECTION is given, publish to it. Returns request response"
+Optionally, if COLLECTION is given, publish to it.  Returns request response"
   (let ((endpoint
          (concat writefreely-instance-api-endpoint
                  (when collection (concat "/collections/" collection))
@@ -374,7 +374,7 @@ This function will attempt to update the contents of a blog post if it finds
        (writefreely-publication-link writefreely-post-id))))
 
 (defvar writefreely-mode-map (make-sparse-keymap)
-  "Keymap for writefreely mode")
+  "Keymap for writefreely mode.")
 
 ;;;###autoload
 (define-minor-mode writefreely-mode
