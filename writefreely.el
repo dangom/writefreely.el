@@ -211,7 +211,8 @@ DATA is the request response data."
   "Callback to run upon successful request to update post.
 DATA is the request response data."
   (let ((id (assoc-default 'id (assoc-default 'data data))))
-    (if (string-equal id "spamspamspamspam")
+    (if (or (string-equal id "spamspamspamspam")
+	    (string-equal id "contentisblocked"))
         (message "Post rejected for being considered spam. Contact write.as")
       (message "Post successfully updated."))))
 
@@ -223,7 +224,7 @@ DATA is the request response data."
   (message "Post successfully deleted."))
 
 
-(defun* writefreely--error-fn (&key error-thrown &allow-other-keys&rest _)
+(defun* writefreely--error-fn (&key error-thrown &allow-other-keys)
   "Callback to run in case of error request response.
 ERROR-THROWN is the request response data."
   (message "Got error: %S" error-thrown))
@@ -238,7 +239,7 @@ ERROR-THROWN is the request response data."
 
 (defun writefreely-publish-request (title body &optional collection)
   "Send post request to the write.as API endpoint with TITLE and BODY as data.
-Optionally, if COLLECTION is given, publish to it. Returns request response"
+Optionally, if COLLECTION is given, publish to it.  Returns request response"
   (let ((endpoint
          (concat writefreely-instance-api-endpoint
                  (when collection (concat "/collections/" collection))
@@ -302,7 +303,8 @@ Message post successfully updated.
 (defun writefreely-publish-buffer (&optional collection)
   "Publish the current Org buffer to write.as anonymously, or to COLLECTION, if given."
   (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
-         (body (writefreely--org-as-md-string))
+	 (tbody (writefreely--org-as-md-string))
+         (body (if (string-empty-p tbody) "-" tbody))
          ;; POST the blogpost with title and body
          (response (writefreely-publish-request title body collection))
          ;; Get the id and token from the response
@@ -373,7 +375,7 @@ This function will attempt to update the contents of a blog post if it finds
        (writefreely-publication-link writefreely-post-id))))
 
 (defvar writefreely-mode-map (make-sparse-keymap)
-  "Keymap for writefreely mode")
+  "Keymap for writefreely mode.")
 
 ;;;###autoload
 (define-minor-mode writefreely-mode
