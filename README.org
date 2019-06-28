@@ -9,7 +9,7 @@ View it in action:
 #+ATTR_HTML: :style margin-left: auto; margin-right: auto;
 [[writefreely-el-demo.gif]]
 
-An example post generated with this library can be found [[https://write.as/dani/an-emacs-library-for-frictionless-blogging][here]].
+An example post generated with this library can be found [[https://write.as/dani/an-emacs-library-for-frictionless-blogging][here]]. The source org file can be found under example-post.org in the root of this repository.
 
 * Installation
 
