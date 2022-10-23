@@ -5,6 +5,8 @@
 ;; Author: Daniel Gomez <d.gomez at posteo dot org>
 ;; Created: 2018-16-11
 ;; URL: https://github.com/dangom/writefreely.el
+;; Package-Version: 20190628.1606
+;; Package-Commit: 83a487e48e0d8342c372deb74d04c0b43474268c
 ;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0") (request "0.3"))
 ;; Version: 0.1.0
 ;; Keywords: convenience
@@ -171,12 +173,12 @@ If POST-TOKEN, encode it as well."
          (language (writefreely--get-orgmode-keyword "LANGUAGE"))
          (created-date (writefreely--formatted-date-from-keyword)))
     (when post-token
-      (add-to-list 'alist `("token" . ,post-token)))
+      (push alist `("token" . ,post-token)))
     (when language
-      (add-to-list 'alist `("lang" . ,language)))
+      (push alist `("lang" . ,language)))
     (when (and writefreely-maybe-publish-created-date
                created-date)
-      (add-to-list 'alist `("created" . ,created-date)))
+      (push alist `("created" . ,created-date)))
     (encode-coding-string (json-encode alist) 'utf-8)))
 
 
