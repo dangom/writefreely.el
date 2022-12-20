@@ -171,12 +171,12 @@ If POST-TOKEN, encode it as well."
          (language (writefreely--get-orgmode-keyword "LANGUAGE"))
          (created-date (writefreely--formatted-date-from-keyword)))
     (when post-token
-      (push alist `("token" . ,post-token)))
+      (setq alist (append alist `(("token" . ,post-token)))))
     (when language
-      (push alist `("lang" . ,language)))
+      (setq alist (append alist `(("lang" . ,language)))))
     (when (and writefreely-maybe-publish-created-date
                created-date)
-      (push alist `("created" . ,created-date)))
+      (setq alist (append alist `(("created" . ,created-date)))))
     (encode-coding-string (json-encode alist) 'utf-8)))
 
 
