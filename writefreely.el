@@ -5,7 +5,7 @@
 ;; Author: Daniel Gomez <d.gomez at posteo dot org>
 ;; Created: 2018-16-11
 ;; URL: https://github.com/dangom/writefreely.el
-;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-gfm "0.0") (request "0.3"))
+;; Package-Requires: ((emacs "24.3") (org "9.0") (ox-hugo "0.12") (request "0.3"))
 ;; Version: 0.1.0
 ;; Keywords: convenience
 
@@ -34,7 +34,8 @@
 
 ;;; Code:
 
-(require 'ox-gfm)
+(require 'ox-hugo)
+(require 'ox-blackfriday)
 (require 'json)
 (require 'request)
 (require 'cl)
@@ -125,7 +126,7 @@ Otherwise default header."
             ;; Do not let bibliography links be converted to HTML.
             (let ((org-ref-bibliography-entry-format
                    writefreely-org-ref-bibliography-entry-format))
-              (org-gfm-export-as-markdown)))
+              (org-blackfriday-export-as-markdown)))
            (md-string
             (with-current-buffer md-buffer
               (buffer-substring-no-properties (point-min) (point-max)))))
