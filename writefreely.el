@@ -129,6 +129,14 @@ Otherwise default header."
               (org-blackfriday-export-as-markdown)))
            (md-string
             (with-current-buffer md-buffer
+              ;; see https://github.com/dangom/writefreely.el/issues/28
+              (save-excursion
+                (goto-char (point-min))
+                (while
+                    (re-search-forward "&lt;!--more--&gt;" nil t)
+                  (replace-match "<!--more-->"))
+                (save-current-buffer))
+              ;; ___
               (buffer-substring-no-properties (point-min) (point-max)))))
       (set-buffer org-buffer)
       (kill-buffer md-buffer)
