@@ -136,6 +136,13 @@ Otherwise default header."
                     (re-search-forward "&lt;!--more--&gt;" nil t)
                   (replace-match "<!--more-->"))
                 (save-current-buffer))
+              ;; fix wrong export of hashtags at beginning of line
+              (save-excursion
+                (goto-char (point-min))
+                (while
+                    (re-search-forward "^\\\\#" nil t)
+                  (replace-match "#"))
+                (save-current-buffer))
               ;; ___
               (buffer-substring-no-properties (point-min) (point-max)))))
       (set-buffer org-buffer)
