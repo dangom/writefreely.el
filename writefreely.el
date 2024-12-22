@@ -508,6 +508,27 @@ This function will attempt to update the contents of a blog post if it finds
       (browse-url
        (writefreely-publication-link writefreely-post-id))))
 
+(defun writefreely-preview-as-markdown ()
+  "Create a new buffer with the Markdown preview of the current Org buffer.
+This shows exactly what would be uploaded to WriteFreely, including
+processed image links if `writefreely-upload-images' is enabled."
+  (interactive)
+  (let* ((title (writefreely--get-orgmode-keyword "TITLE"))
+         (body (writefreely--org-as-md-string))
+         (buffer-name "*WriteFreely Preview*"))
+    ;; Create or switch to the preview buffer
+    (with-current-buffer (get-buffer-create buffer-name)
+      (erase-buffer)
+      (markdown-mode) ; Assuming markdown-mode is available
+      (when title
+        (insert (concat "# " title "\n\n")))
+      (insert body)
+      ;; Display the buffer
+      (display-buffer (current-buffer)
+                      '((display-buffer-reuse-window
+                         display-buffer-pop-up-window)
+                        (reusable-frames . visible))))))
+
 (defvar writefreely-mode-map (make-sparse-keymap)
   "Keymap for writefreely mode.")
 
