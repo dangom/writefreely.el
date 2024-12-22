@@ -74,6 +74,17 @@ You may change the endpoint in case your blog runs in a different
 writefreely instance."
   :type 'string)
 
+(defcustom writefreely-upload-images nil
+  "When t, upload images to snap.as during export."
+  :type 'bool)
+
+(defcustom writefreely-snapas-api-endpoint "https://snap.as/api"
+  "URL of the snap.as API endpoint."
+  :type 'string)
+
+(defvar writefreely--image-cache nil
+  "Cache of already uploaded images and their URLs.")
+
 
 ;;; Constants
 
@@ -89,6 +100,111 @@ writefreely instance."
     ("proceedings" . "%e, %t in %S, %u (%y).")
     ("inproceedings" . "%a, %t, %p, in %b, edited by %e, %u (%y)"))
   "Have ox-gfm output reference links compatible with writefreely's Markdown.")
+
+
+;;; Image handling functions
+(defun writefreely--generate-upload-header ()
+  "Return request header with authorization token, if available.
+Otherwise default header."
+  (if writefreely-auth-token
+      `(("Authorization" . ,writefreely-auth-token))  ; Return an alist with proper header format
+    writefreely-request-default-header))
+
+(defun writefreely--get-snapas-images ()
+  "Fetch list of existing images from snap.as API."
+  (when writefreely-auth-token
+    (let ((response (request-response-data
+                     (request
+                       (concat writefreely-snapas-api-endpoint "/me/photos")
+                       :type "GET"
+                       :parser #'json-read
+                       :headers (writefreely--generate-request-header)
+                       :sync t
+                       :error #'writefreely--error-fn))))
+      (when response
+        ;; Create a hash table for quick lookup by filename
+        (let ((image-table (make-hash-table :test 'equal)))
+          (seq-doseq (photo (assoc-default 'data response))
+            (puthash (assoc-default 'filename photo)
+                     (list :url (assoc-default 'url photo)
+                           :id (assoc-default 'id photo))
+                     image-table))
+          image-table)))))
+
+(defun writefreely--upload-image (file)
+  "Upload FILE to snap.as and return the URL.
+Returns nil if upload fails."
+  (message "Uploading image: %s" file)
+  (let* ((filename (file-name-nondirectory file))
+         (existing-images (or writefreely--image-cache
+                              (setq writefreely--image-cache
+                                    (writefreely--get-snapas-images))))
+         (existing-image (and existing-images
+                              (gethash filename existing-images))))
+    (if existing-image
+        (progn
+          (message "Found existing image: %s" filename)
+          (plist-get existing-image :url))
+      ;; Upload new image
+      (message "Attempting to upload new image: %s" file)
+      (let* ((upload-url (concat writefreely-snapas-api-endpoint "/photos/upload"))
+             ;; Changed this part to match the curl -F "file=@photo.jpeg" format
+             (response (request-response-data
+                        (request
+                          upload-url
+                          :type "POST"
+                          :files `(("file" . ,file))
+                          :headers (writefreely--generate-upload-header)
+                          :parser #'json-read
+                          :sync t
+                          :error (lambda (&rest args)
+                                   (message "Upload error: %S" args))
+                          :success (lambda (&rest args)
+                                     (message "Upload success: %S" args)))))
+             (data (assoc-default 'data response))
+             (url (assoc-default 'url data))
+             (id (assoc-default 'id data)))
+        (message "Upload response: %S" response)
+        (if (and url id)
+            (progn
+              (puthash filename
+                       (list :url url :id id)
+                       writefreely--image-cache)
+              url)
+          (message "Upload failed for %s" filename)
+          nil)))))
+
+(defun writefreely--process-image-links (markdown-content)
+  "Process image links in MARKDOWN-CONTENT, replacing local paths with snap.as URLs.
+Also reformats image captions to appear centered below the image."
+  (with-temp-buffer
+    (insert markdown-content)
+    (goto-char (point-min))
+    ;; First try to match simple image syntax without caption
+    (while (re-search-forward "!\\[\\([^]]*\\)\\](\\([^)]+?\\))" nil t)
+      (let* ((alt-text (match-string 1))
+             (path (match-string 2))
+             (full-path (expand-file-name path))
+             (url (and (file-exists-p full-path)
+                       (writefreely--upload-image full-path))))
+        (message "Processing simple image: alt=%s path=%s" alt-text path)
+        (when url
+          (replace-match (format "![%s](%s)" alt-text url)))))
+    ;; Then match images with captions
+    (goto-char (point-min))
+    (while (re-search-forward "!\\[\\([^]]*\\)\\](\\([^)]+?\\)\\s-+\"\\([^\"]+\\)\")" nil t)
+      (let* ((alt-text (match-string 1))
+             (path (match-string 2))
+             (caption (match-string 3))
+             (full-path (expand-file-name path))
+             (url (and (file-exists-p full-path)
+                       (writefreely--upload-image full-path))))
+        (message "Processing captioned image: alt=%s path=%s caption=%s"
+                 alt-text path caption)
+        (when url
+          (replace-match (format "![%s](%s)\n<div style=\"text-align:center;\"><small>%s</small></div>"
+                                 alt-text url caption)))))
+    (buffer-string)))
 
 
 ;;; Support Functions
@@ -143,11 +259,13 @@ Otherwise default header."
                     (re-search-forward "^\\\\#" nil t)
                   (replace-match "#"))
                 (save-current-buffer))
-              ;; ___
-              (buffer-substring-no-properties (point-min) (point-max)))))
-      (set-buffer org-buffer)
+              (buffer-substring-no-properties (point-min) (point-max))))
+           ;; Process images if enabled
+           (final-content (if writefreely-upload-images
+                              (writefreely--process-image-links md-string)
+                            md-string)))
       (kill-buffer md-buffer)
-      md-string)))
+      final-content)))
 
 
 (defun writefreely--formatted-date-from-keyword ()

@@ -25,6 +25,13 @@ This project is available on Melpa. To use it:
 #+END_SRC
 
 This package now depends on [[https://github.com/kaushalmodi/ox-hugo][ox-hugo]] to get the code export done properly.
+
+** Image support
+
+Rudimentary image support exists for users who have access to the snap.as API. Images will be automatically uploaded if they do not exist, and links will be converted upon export. Note that images are cached based on filenames, so images with the same filename will not be reuploaded as of now.
+
+In order to enable images, set =writefreely-upload-images= to =t=, i.e., add the following to your config: =(setq writefreely-upload-images t)=. The default is =nil=.
+
 * Usage
 
 1. Write an Org file. You may want to set the following options, to tweak ox-gfm's export: =toc:nil -:nil \n:t=.
